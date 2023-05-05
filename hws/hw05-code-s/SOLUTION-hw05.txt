@@ -1,0 +1,320 @@
+                           _________________
+
+                            HW 05 QUESTIONS
+                           _________________
+
+
+- Name: (FILL THIS in)
+- NetID: (THE kauf0095 IN kauf0095@umn.edu)
+
+Write your answers to the questions below directly in this text file to
+prepare for the associated quiz.
+
+
+PROBLEM 1: C Bit Operations in Collatz
+======================================
+
+  Examine the program collatz.c which performs a similar computation to
+  a HW01 code except that this version uses bitwise operations in the
+  function collatz_bitwise().  Examine the locations labeled with
+  comments and shown below and describe the equivalent "normal"
+  arithmetic that is happening at each postion.
+
+
+A
+~
+
+  ,----
+  |   int neg_mask = 0x1 << 31;     // A
+  |   if(n & neg_mask){             // A
+  |     return -1;
+  |   }
+  `----
+
+
+Solution                                                      :solution:
+--------
+
+  Checking for negative values by inspecting the leading bit: 1 for
+  negatives, 0 for positives.
+
+
+B
+~
+
+  ,----
+  |     if(n & 0x1){                // B
+  |       ...
+  |     }
+  |     else{
+  |       ...
+  |     }
+  `----
+
+
+Solution                                                      :solution:
+--------
+
+  Checking for odd vs even values: odd if rightmost bit is set, even
+  otherwise
+
+
+C
+~
+
+  ,----
+  |       n = ((n << 2) - n) + 1;   // C
+  `----
+
+
+Solution                                                      :solution:
+--------
+
+  Computing
+  ,----
+  | n = n*3 + 1;
+  `----
+
+  - Left shift by 2 is n*4
+  - Subtract n i n*3
+  - Add 1
+
+
+D
+~
+
+  ,----
+  |       n = n >> 1;               // D
+  `----
+
+
+Solution                                                      :solution:
+--------
+
+  Compute
+  ,----
+  | n = n/2;
+  `----
+
+  - Right shift by 1 bit is equivalent to divide by 2
+
+
+PROBLEM 2: C Union and Float Bits
+=================================
+
+A
+~
+
+  Compile and run union.c to see what floating point value is printed by
+  the lines.
+  ,----
+  |   flint.in = 0xC378C000;        // assign an int value
+  |   printf("%.4f\n",flint.fl);    // print as a float value
+  `----
+  Show the float value and explain why it has a well-defined value
+  despite no assignment of `flint.fl = ...;' appearing.
+
+
+Solution                                                      :solution:
+--------
+
+  The value is -248.75. It is an example discussed in class and results
+  from setting the bits of the float to 0xC378C000.
+
+  This is done due to the union fields fl and in overlapping so that
+  when in is set, fl is also changed.
+
+
+B
+~
+
+  The subsequent loop
+  ,----
+  |   flint.in = 0xC378C000;        // assign an int value
+  |   ...
+  |   for(int i=0; i<4; i++){       // print chars individually
+  |     unsigned char c = flint.ch[i];
+  |     printf("%d: %02x '%c'\n", i,c,c);
+  |   }
+  `----
+  prints values of the bytes associated with `flint' as chars and
+  hexadecimal numbers.  Show its output and explain why the hex digits
+  appear in a different order from the constant flint is set to
+  initially.
+
+
+Solution                                                      :solution:
+--------
+
+  ,----
+  | 0: 00 ''
+  | 1: c0 ''
+  | 2: 78 'x'
+  | 3: c3 ''
+  `----
+  The hex numbers appear in reverse order due to the little endian
+  layout of the machine: high order byte c3 appears at higher memory
+  while low order by 00 appears earlier at `ch[0]'.
+
+
+C
+~
+
+  The lines
+  ,----
+  | int mask = ~(0x80000000);
+  | flint.in = flint.in & mask;
+  | printf("%.4f\n",flint.fl);
+  `----
+  modify flint again. Show the resulting floating point output and
+  describe why it has the shown value.
+
+
+Solution                                                      :solution:
+--------
+
+  The output is 248.7500. This is due to flipping 'off' the leading bit
+  which makes the previously negative floating point value positive.
+
+
+PROBLEM 3: GDB
+==============
+
+A debug_scramble.c
+~~~~~~~~~~~~~~~~~~
+
+  The file debug_scramble.c has a short problem which requires the
+  correct number to be given as a command line argument. An array is
+  filled with values and then scrambled. The command line must
+  correspond to the "positive" response. Due to the array scrambling it
+  is not apparent from the source code which array location contains the
+  positive response.
+
+  Use the debugger to determine the location the positive response.  For
+  each of the steps below, write the commands to issue to do the items
+  listed.
+  1. Compile debug_scramble.c with debug symbols turned on
+  2. Start gdb with the resulting program
+  3. Set the arguments of the program to just 0
+  4. Set a breakpoint at a line in debug_scramble.c after the scramble
+     loop
+  5. Run the program
+  6. Print out the array after stopping at the breakpoint
+  7. Locate the positive response
+  8. Change the program arguments so that it is the correct index
+  9. Re-run the program and continue to the end
+
+
+Solution                                                      :solution:
+--------
+
+  Correct input index should be 10.
+
+  ,----
+  | > gcc -g debug_scramble.c
+  | 
+  | > gdb a.out
+  | GNU gdb (GDB) 8.1
+  | Reading symbols from a.out...done.
+  | 
+  | (gdb) break debug_scramble.c:33
+  | Breakpoint 1 at 0x8e8: file debug_scramble.c, line 33.
+  | 
+  | (gdb) set args 0
+  | 
+  | (gdb) run
+  | Starting program: /home/kauffman/Dropbox/teaching/2021-S2020/hw/hw05-bits-gdb/hw05-code/a.out 0
+  | 
+  | Breakpoint 1, main (argc=2, argv=0x7fffffffe2a8) at debug_scramble.c:33
+  | 33	  if(strcmp(arr[guess],"you betcha") == 0){ // check guess
+  | 
+  | (gdb) print arr
+  | $1 = {0x555555554a43 "nope", 0x555555554a43 "nope", 0x555555554a43 "nope", 0x555555554a43 "nope", 
+  |   0x555555554a43 "nope", 0x555555554a43 "nope", 0x555555554a43 "nope", 0x555555554a43 "nope", 
+  |   0x555555554a43 "nope", 0x555555554a43 "nope", 0x555555554a38 "you betcha", 0x555555554a43 "nope", 
+  |   0x555555554a43 "nope", 0x555555554a43 "nope", 0x555555554a43 "nope", 0x555555554a43 "nope"}
+  | 
+  | (gdb) set args 10
+  | 
+  | (gdb) run
+  | The program being debugged has been started already.
+  | Start it from the beginning? (y or n) y
+  | Starting program: /home/kauffman/Dropbox/teaching/2021-S2020/hw/hw05-bits-gdb/hw05-code/a.out 10
+  | 
+  | Breakpoint 1, main (argc=2, argv=0x7fffffffe2a8) at debug_scramble.c:33
+  | 33	  if(strcmp(arr[guess],"you betcha") == 0){ // check guess
+  | 
+  | (gdb) continue
+  | Continuing.
+  | Oh yaaah! Have some hotdish
+  | [Inferior 1 (process 7858) exited normally]
+  | (gdb) 
+  `----
+
+
+B debug_long.c
+~~~~~~~~~~~~~~
+
+  The file debug_long.c has another short debugging problem.  It
+  requires an input string which is interpreted similarly to a
+  demonstration code at the top of code.  The correct input will elicit
+  the affirmative response.
+
+  To determine the correct input take the following approach.
+  1. Break after setting the variable `lng' to its large, mysterious
+     value
+  2. Print the bytes of long NOT as a number but interpreted as an array
+     of characters (string). This can be done in `gdb' by coercing the
+     types as in:
+     ,----
+     | gdb> print (char []) varname
+     `----
+  3. This should shed light on the correct input.
+
+
+Solution                                                      :solution:
+--------
+
+  The long codes the string "Sweet!" which is the correct input.
+
+  ,----
+  | > gcc -g debug_long.c
+  | > gdb a.out
+  | GNU gdb (GDB) 8.1
+  | Reading symbols from a.out...done.
+  | (gdb) set args abc
+  | (gdb) break debug_long.c:23
+  | Breakpoint 1 at 0x81a: file debug_long.c, line 23.
+  | (gdb) run
+  | Starting program: /home/kauffman/Dropbox/teaching/2021-S2020/hws/hw05-bits-gdb/hw05-code/a.out abc
+  | lo: 00003f3f65647544 69541516571972 
+  | ch: Dude??
+  | 
+  | Breakpoint 1, main (argc=2, argv=0x7fffffffe2a8) at debug_long.c:28
+  | 28	  strcpy(chlo2.ch, argv[1]);
+  | 
+  | (gdb) print lng
+  | $1 = 36783801071443
+  | (gdb) print (char []) lng
+  | $2 = "Sweet!\000"
+  | 
+  | (gdb) cont
+  | Continuing.
+  | Nope, not equal...
+  | [Inferior 1 (process 7969) exited with code 0377]
+  | 
+  | (gdb) set args "Sweet!"
+  | (gdb) run
+  | Starting program: /home/kauffman/Dropbox/teaching/2021-S2020/hw/hw05-bits-gdb/hw05-code/a.out "Sweet!"
+  | lo: 00003f3f65647544 69541516571972 
+  | ch: Dude??
+  | 
+  | Breakpoint 1, main (argc=2, argv=0x7fffffffe2a8) at debug_long.c:28
+  | 28	  strcpy(chlo2.ch, argv[1]);
+  | 
+  | (gdb) cont
+  | Continuing.
+  | Yup, equal!
+  | [Inferior 1 (process 7979) exited normally]
+  | (gdb) 
+  `----

@@ -1,0 +1,6 @@
+==== Matrix Square Benchmark Version 1 ====
+  SIZE       BASE       OPTM  SPDUP   LOG2 FACTOR POINTS 
+   273 4.4227e-01 3.9201e-01   1.13   0.17   1.00   0.17 
+   512 3.2346e+00 2.5734e+00   1.26   0.33   1.88   0.62 
+RAW POINTS: 0.79
+TOTAL POINTS: 1 / 35

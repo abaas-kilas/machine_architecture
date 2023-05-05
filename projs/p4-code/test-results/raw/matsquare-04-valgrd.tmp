@@ -1,0 +1,15 @@
+==3401656== Memcheck, a memory error detector
+==3401656== Copyright (C) 2002-2017, and GNU GPL'd, by Julian Seward et al.
+==3401656== Using Valgrind-3.15.0 and LibVEX; rerun with -h for copyright info
+==3401656== Command: ./matsquare_print 13
+==3401656== Parent PID: 3401655
+==3401656== 
+==3401656== 
+==3401656== HEAP SUMMARY:
+==3401656==     in use at exit: 0 bytes in 0 blocks
+==3401656==   total heap usage: 3 allocs, 3 frees, 2,028 bytes allocated
+==3401656== 
+==3401656== All heap blocks were freed -- no leaks are possible
+==3401656== 
+==3401656== For lists of detected and suppressed errors, rerun with: -s
+==3401656== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)

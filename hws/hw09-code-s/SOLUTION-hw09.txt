@@ -1,0 +1,534 @@
+                           _________________
+
+                            HW 09 QUESTIONS
+                           _________________
+
+
+- Name: (FILL THIS in)
+- X.500: (THE kauf0095 IN kauf0095@umn.edu)
+
+Write your answers to the questions below directly in this text file to
+prepare for the associated quiz.
+
+
+PROBLEM 1: Movement Mistakes
+============================
+
+  Analyze the files `posneg_main.c' and `posneg_asm.s'.  The C code uses
+  a function in assembly and the assembly function has a common bug in
+  it.
+
+
+A
+~
+
+  Compile the files together and run the resulting program. Make sure
+  that you understand how to run a `gcc' command to compile the two
+  files, C and assembly code, to produce an executable.
+
+  After running the resulting program, explain why the output appears
+  strange based on the local variables defined in `posneg_main.c' and
+  the purpose of the function in `posneg_asm.s'.
+
+
+Solution                                                      :solution:
+--------
+
+  ,----
+  | > gcc posneg_main.c posneg_asm.s
+  | 
+  | > ./a.out
+  | five is negative
+  | minus one is positive
+  `----
+  This is strange because the value `five' is positive, not negative and
+  `minus_one' is negative, not positive. These are defined in
+  `posneg_main.c' and tested using the `posneg()' function in
+  `posneg_asm.s' which clearly has bugs.
+
+
+B
+~
+
+  Analyze the code in `posneg_asm.s' carefully and compare the `movX /
+  cmpX' instructions used in the first few lines against the types of
+  variables in the `posneg_main.c' code.  You may want to step into this
+  function in GDB to look at the register values after the `movX'
+  instruction. Find a bug in this sequence and describe why it causes
+  the loaded value to appear negative.
+
+
+Solution                                                      :solution:
+--------
+
+  The C variables are 32-bit ints but the `movq' moves 64-bits. This
+  will move part of adjacent variables. In this case, since negative
+  values surround five, it gets the leading ones and appears negative.
+
+  ,----
+  | ### int posneg(int *ptr);
+  | ### // Determines if pointer to given int has a positive or
+  | ### // negative value. Returns 0 for positive, 1 for negative.
+  | ### // Defined in posneg.s assembly file. 
+  | ### FIX BUGS IN THIS VERSION
+  | .text
+  | .global posneg
+  | posneg:
+  |         movq    (%rdi),%rsi
+  |         cmpq    $0,%rsi
+  |         jl      .NEG
+  |         movl    $0,%eax
+  |         ret
+  | .NEG:
+  |         movl    $1,%eax
+  |         ret
+  `----
+
+
+C
+~
+
+  Fix the bug in `posneg_asm.s' and paste your corrected code below.
+
+
+Solution                                                      :solution:
+--------
+
+  ,----
+  | ## int posneg(int *ptr);
+  | ## // Determines if pointer to given int has a positive or
+  | ## // negative value. Returns 0 for positive, 1 for negative.
+  | ## // Defined in posneg.s assembly file.
+  | 
+  | .text
+  | .global posneg
+  | posneg:
+  |         movl    (%rdi),%esi     # move 32-bit quantity
+  |         cmpl    $0,%esi         # compare 32-bit quantity
+  |         jl      .NEG
+  |         movl    $0,%eax
+  |         ret
+  | .NEG:
+  |         movl    $1,%eax
+  |         ret
+  `----
+
+  ,----
+  | > rm posneg_asm.s
+  | > ln -s posneg_asm.s.solution posneg_asm.s
+  | > gcc posneg_main.c posneg_asm.s
+  | > ./a.out
+  | five is positive
+  | minus one is negative
+  `----
+
+
+PROBLEM 2: Convert C to Assembly
+================================
+
+  Convert the C function in the file `col_check.c' to x86-64
+  assembly. Note that the parameter is a packed struct, not a pointer to
+  a struct.
+
+  ,----
+  | typedef struct{
+  |   int cur;            // current value in collatz sequence
+  |   int step;           // step number in collatz sequence
+  | } colinfo_t;
+  | // |       | Byte |   Byte | Packed |
+  | // | Field | Size | Offset |   Bits |
+  | // |-------+------+--------+--------|
+  | // | cur   |    4 |     +0 |   0-31 |
+  | // | step  |    4 |     +4 |  32-64 |
+  | 
+  | int col_check(colinfo_t info){
+  |   // Analyzes values in the packed struct arg
+  |   // info to detect errors in it. An int
+  |   // comprised of set error bits is
+  |   // returned. Bit 0: cur field was 0 or
+  |   // below, Bit 1: step was negative, Bit 2:
+  |   // cur was 1 but step is negative.
+  | 
+  |   int cur = info.cur;
+  |   int step = info.step;
+  |   int errs = 0;
+  |   if(cur <= 0){
+  |     errs = errs | 0x1; // 0b0001
+  |   }
+  |   if(step < 0){
+  |     errs = errs | 0x2; // 0b0010
+  |   }
+  |   if(cur==1 && step < 0){
+  |     errs = errs | 0x4; // 0b0100
+  |   }
+  |   
+  |   return errs;
+  | }
+  `----
+
+
+Solution                                                      :solution:
+--------
+
+  ,----
+  | .text
+  | .globl	col_check
+  | col_check:
+  | 	movq $0xFFFFFFFF,%rdx 
+  | 	movq	%rdi, %rdx      # use edi for cur 
+  | 	sarq	$32, %rdx       # use edx for step
+  | 	movl	$0, %eax        # errs
+  | 	cmpl	$0, %edi        # if(cur <= 0){
+  | 	jg	.CURPOS
+  | 	orl     $0x1,%eax       # eax |= 0x1
+  | .CURPOS:
+  | 	cmpl	$0, %edx        # if(step < 0)
+  |         jge     .STEPNONEG
+  |         orl     $0x2,%eax       # eax |= 0x2
+  | .STEPNONEG:
+  | 	cmpl	$1, %edi        # cur== 1
+  | 	jnz     .RETURN
+  |         cmpl    $0, %edx        # && step < 0
+  | 	jge     .RETURN
+  | 	orl     $0x4,%eax       # eax |= 4
+  | .RETURN:
+  |         ret
+  `----
+
+
+PROBLEM 3: Valgrind Debugging Assembly
+======================================
+
+A
+~
+
+  Study the C file `badstack.c' which presents a small `main()' function
+  which calls `inc_larger()'.  Compile this file and run the resulting
+  executable.
+
+  After you are comfortable with the C version, examine similar
+  `badstack_asm.s' file which encodes the same two functions and
+  algorithm but has bugs.  Compile and run this file and show the
+  results.
+
+
+Solution                                                      :solution:
+--------
+
+  ,----
+  | > gcc badstack.c
+  | > ./a.out
+  | 2, 4, 6, 8, who do we appreciate?
+  | Compilers! Compilers! Yeeeeaaah COMPILERS!
+  | 
+  | > gcc badstack_asm.s 
+  | > ./a.out
+  | 2, 4, 6, 8, who do we appreciate?
+  | Compilers! Compilers! Yeeeeaaah COMPILERS!
+  | Segmentation fault (core dumped)
+  `----
+
+  For reference here are the C and Assembly file versions
+
+  ,----
+  | // badstack.c: C version of buggy assembly code in badstack_asm.s;
+  | // this version works correctly as the compiler automatically creates
+  | // space for local variables in main().
+  | 
+  | #include <stdio.h>
+  | 
+  | void inc_larger(int *x, int *y);
+  | 
+  | int main(){
+  |   int a=2, b=3, c=6, d=7;
+  |   inc_larger(&a, &b);
+  |   inc_larger(&c, &d);
+  |   printf("%d, %d, %d, %d, who do we appreciate?\n", a, b, c, d);
+  |   printf("Compilers! Compilers! Yeeeeaaah COMPILERS!\n");
+  |   return 0;
+  | }
+  | 
+  | void inc_larger(int *x, int *y){
+  |   if(*x >= *y){
+  |     *x += 1;
+  |   }
+  |   else{
+  |     *y += 1;
+  |   }
+  | }
+  `----
+
+  ,----
+  | ### Call the inc_larger function several times on variables in
+  | ### main. The main function has stack problems which must be
+  | ### fixed.
+  | 
+  | .text
+  | .globl	main
+  | main:
+  | 
+  | 	movl	$2,  0(%rsp)
+  | 	movl	$3,  4(%rsp)
+  | 	movl	$6,  8(%rsp)
+  | 	movl	$7, 12(%rsp)
+  | 	
+  | 	leaq    0(%rsp), %rdi
+  | 	leaq    4(%rsp), %rsi
+  |         call    inc_larger
+  | 	
+  | 	leaq     8(%rsp), %rdi
+  | 	leaq    12(%rsp), %rsi
+  |         call    inc_larger
+  | 	
+  | 	leaq	.FORMAT1(%rip), %rdi   # arg1 .FORMAT1
+  | 	movl	 0(%rsp), %esi         # arg2
+  | 	movl	 4(%rsp), %edx         # arg3
+  | 	movl	 8(%rsp), %ecx         # arg4
+  | 	movl    12(%rsp), %r8d         # arg5
+  | 	movl	$0, %eax               # special setup for printf
+  | 	call	printf@PLT             # function call
+  | 
+  | 	leaq	.FORMAT2(%rip), %rdi   # arg1 .FORMAT1
+  | 	movl	$0, %eax               # special setup for printf
+  | 	call	printf@PLT             # function call
+  | 	
+  | 
+  |         movl    $0,%eax
+  |         ret
+  | 	
+  | .global inc_larger
+  | inc_larger:     
+  | 	movl    (%rdi), %edx
+  |         movl    (%rsi), %ecx
+  |         cmpl    %ecx, %edx
+  |         jl      .INC_SECOND
+  |         addl    $1,(%rdi)
+  |         ret
+  | 
+  | .INC_SECOND:
+  |         addl    $1,(%rsi)
+  |         ret
+  | 
+  | .data
+  | .FORMAT1:                       # format strings for printf calls
+  | 	.string	"%d, %d, %d, %d, who do we appreciate?\n"
+  | .FORMAT2:	
+  | 	.string	"Compilers! Compilers! Yeeeeaaah COMPILERS!\n"
+  `----
+
+
+B
+~
+
+  While there is output produced by `badstack_asm.s' in most cases, it
+  will not complete successfully.  To gain insight into what is
+  happening, recompile the program with Debugging information by passing
+  an additional flag to `gcc'.  Then run the program under Valgrind to
+  show more information on the nature of the problem. Show the output
+  from Valgrind below.
+
+
+Solution                                                      :solution:
+--------
+
+  ,----
+  | > gcc -g badstack_asm.s 
+  | > valgrind ./a.out
+  | ==193180== Memcheck, a memory error detector
+  | ==193180== Copyright (C) 2002-2017, and GNU GPL'd, by Julian Seward et al.
+  | ==193180== Using Valgrind-3.16.1 and LibVEX; rerun with -h for copyright info
+  | ==193180== Command: ./a.out
+  | ==193180== 
+  | 2, 4, 6, 8, who do we appreciate?
+  | Compilers! Compilers! Yeeeeaaah COMPILERS!
+  | ==193180== Jump to the invalid address stated on the next line
+  | ==193180==    at 0x400000002: ???
+  | ==193180==    by 0x800000005: ???
+  | ==193180==    by 0x10489BF72: ???
+  | ==193180==    by 0x109138: ??? (in /home/kauffman/Dropbox/teaching/2021-F2020/hw/hw09-review/solution-hw09-2021/a.out)
+  | ==193180==    by 0x7FFFFFFFF: ???
+  | ==193180==  Address 0x400000002 is not stack'd, malloc'd or (recently) free'd
+  | ==193180== 
+  | ==193180== 
+  | ==193180== Process terminating with default action of signal 11 (SIGSEGV): dumping core
+  | ==193180==  Access not within mapped region at address 0x400000002
+  | ==193180==    at 0x400000002: ???
+  | ==193180==    by 0x800000005: ???
+  | ==193180==    by 0x10489BF72: ???
+  | ==193180==    by 0x109138: ??? (in /home/kauffman/Dropbox/teaching/2021-F2020/hw/hw09-review/solution-hw09-2021/a.out)
+  | ==193180==    by 0x7FFFFFFFF: ???
+  | ==193180==  If you believe this happened as a result of a stack
+  | ==193180==  overflow in your program's main thread (unlikely but
+  | ==193180==  possible), you can try to increase the size of the
+  | ==193180==  main thread stack using the --main-stacksize= flag.
+  | ==193180==  The main thread stack size used in this run was 10022912.
+  | ==193180== 
+  | ==193180== HEAP SUMMARY:
+  | ==193180==     in use at exit: 0 bytes in 0 blocks
+  | ==193180==   total heap usage: 1 allocs, 1 frees, 1,024 bytes allocated
+  | ==193180== 
+  | ==193180== All heap blocks were freed -- no leaks are possible
+  | ==193180== 
+  | ==193180== For lists of detected and suppressed errors, rerun with: -s
+  | ==193180== ERROR SUMMARY: 1 errors from 1 contexts (suppressed: 0 from 0)
+  | Segmentation fault (core dumped)
+  `----
+
+
+C
+~
+
+  Analyze the Valgrind output carefully. It should contain one major
+  error. Copy and paste the output that pertains to the error below and
+  describe what you think might be going on.  Relate anything you see in
+  the output to the values for variables that show up in
+  `badstack_asm.s', particularly anything that is labeled as a 'Invalid
+  Address' is relevant. As a hint, the problem lies with data that is in
+  the stack.
+
+
+Solution                                                      :solution:
+--------
+
+  The output for the main error is
+  ,----
+  | ==193180== Jump to the invalid address stated on the next line
+  | ==193180==    at 0x400000002: ???
+  | ==193180==    by 0x800000005: ???
+  | ==193180==    by 0x10489BF72: ???
+  | ==193180==    by 0x109138: ??? (in /home/kauffman/Dropbox/teaching/2021-F2020/hw/hw09-review/solution-hw09-2021/a.out)
+  | ==193180==    by 0x7FFFFFFFF: ???
+  | ==193180==  Address 0x400000002 is not stack'd, malloc'd or (recently) free'd
+  `----
+  Of note is the 'Invalid Address' `0x400000002': this is the first two
+  integers that are put into the stack, 2 and 4.  As the `main' starts,
+  it puts the integers 2,4,6,8 directly into the stack via instructions
+  like `movl $4,0(%rsp)'. However does not extend the stack first. This
+  means the return address pointed at by `%rsp' is overwritten by the
+  2,4 integers.  On issuing a `ret' instruction at the end of `main()',
+  the return address is now corrupted and out of bounds triggering the
+  segmentation fault.
+
+
+D
+~
+
+  Use your knowledge of what has happened to repair the buggy `main()'
+  function in `badstack_asm.s'.  Describe the changes required below.
+  After fixing the code, compile and run it to make sure that it
+  performs correctly and identically to `badstack.c' does. You will
+  likely need to make changes towards the beginning of `main()' and just
+  prior to its `ret' instruction.
+
+  Hint: You may also compile `badstack.c' to assembly code and examine
+  the first 5-8 instructions in `main()' to see how it manipulates the
+  stack to make space for local variables. Keep in mind that you should
+  compile with the `-Og' option to optimize for debugging and that the
+  setup generated by the compiler is somewhat more complex than required
+  in the hand-coded `badstack_asm.s'.  You may also examine
+  complementary stack manipulations near `ret' at the end of `main()'.
+
+
+Solution                                                      :solution:
+--------
+
+  All that is required is to grow the stack to make space for local
+  variables in main (push a stack frame) and then shrink the stack prior
+  to returning (pop stack frame). There are 4 int's requiring a minimum
+  of 16 bytes of space so adding the code
+  ,----
+  | main:
+  | 	subq    $16, %rsp
+  |         ...
+  | 	addq    $16, %rsp
+  |         movl    $0,%eax
+  |         ret
+  `----
+  is sufficient in most cases.
+
+  BUT adding 16 bytes, in addition to the 8 already on the stack, will
+  not align `%rsp' to a 16-byte boundary. To be compliant with the
+  x86-64 ABI, growing by 24 bytes will get the proper alignment so the
+  push/pop code:
+  ,----
+  | main:
+  | 	subq    $24, %rsp
+  |         ...
+  | 	addq    $24, %rsp
+  |         movl    $0,%eax
+  |         ret
+  `----
+  is the safest, most portable solution.
+
+  The code generated by gcc when compiling via
+  ,----
+  | > gcc -S -Og badstack.c
+  `----
+
+  will contain larger changes to the stack as "canary" values are placed
+  in the stack to ensure that if any "Stack Smashing" occurs
+  (modifications to the return address), it can be detected and the
+  program aborted. This requires more space so it is likely such
+  compiler-generated code will grow by as much as `subq $40, %rsp'.
+
+  The complete solution code is below:
+
+  ,----
+  | ### SOLUTION
+  | ### Call the inc_larger function several times on variables in
+  | ### main. The main function has stack problems which must be
+  | ### fixed.
+  | 
+  | .text
+  | .globl	main
+  | main:
+  | 	subq    $24, %rsp
+  | 
+  | 	movl	$2,  0(%rsp)
+  | 	movl	$3,  4(%rsp)
+  | 	movl	$6,  8(%rsp)
+  | 	movl	$7, 12(%rsp)
+  | 	
+  | 	leaq    0(%rsp), %rdi
+  | 	leaq    4(%rsp), %rsi
+  |         call    inc_larger
+  | 	
+  | 	leaq     8(%rsp), %rdi
+  | 	leaq    12(%rsp), %rsi
+  |         call    inc_larger
+  | 	
+  | 	leaq	.FORMAT1(%rip), %rdi   # arg1 .FORMAT1
+  | 	movl	 0(%rsp), %esi         # arg2
+  | 	movl	 4(%rsp), %edx         # arg3
+  | 	movl	 8(%rsp), %ecx         # arg4
+  | 	movl    12(%rsp), %r8d         # arg5
+  | 	movl	$0, %eax               # special setup for printf
+  | 	call	printf@PLT             # function call
+  | 
+  | 	leaq	.FORMAT2(%rip), %rdi   # arg1 .FORMAT1
+  | 	movl	$0, %eax               # special setup for printf
+  | 	call	printf@PLT             # function call
+  | 	
+  | 	addq    $24, %rsp
+  |         movl    $0,%eax
+  |         ret
+  | 	
+  | .global inc_larger
+  | inc_larger:     
+  | 	movl    (%rdi), %edx
+  |         movl    (%rsi), %ecx
+  |         cmpl    %ecx, %edx
+  |         jl      .INC_SECOND
+  |         addl    $1,(%rdi)
+  |         ret
+  | 
+  | .INC_SECOND:
+  |         addl    $1,(%rsi)
+  |         ret
+  | 
+  | .data
+  | .FORMAT1:                       # format strings for printf calls
+  | 	.string	"%d, %d, %d, %d, who do we appreciate?\n"
+  | .FORMAT2:	
+  | 	.string	"Compilers! Compilers! Yeeeeaaah COMPILERS!\n"
+  `----

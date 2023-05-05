@@ -1,0 +1,13 @@
+I am for medical liability at the federal level.
+7 8 10 13 17 22 StraightBuns!
+7 h 377 
+9999 99999
+gefmag
+4 3 2 5 1 6
+35
+
+
+also a quick note, I had bomb20 first but i couldn't get it to
+run so I downloaded a new one. I kept forgetting to set the 
+common breakpoint so my total explosions overall was 5. I think 
+53 is the highest score I can get for part 2?

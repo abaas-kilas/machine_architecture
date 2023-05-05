@@ -1,0 +1,316 @@
+                              ____________
+
+                               P4 WRITEUP
+                              ____________
+
+
+- Name: Abaas Kilas
+- NetID: kilas002
+
+Answer the questions below according to the project specification. Write
+your answers directly in this text file and submit it along with your
+code.
+
+
+PROBLEM 1: matsquare_OPTM()
+===========================
+
+  Do your timing study on csel-keller1250-NN.cselabs.umn.edu
+
+
+(A) Paste Source Code
+~~~~~~~~~~~~~~~~~~~~~
+
+  Paste a copy of your source code for the function `matsquare_OPTM()'
+
+  ####################### YOUR ANSWER HERE #########################
+int matsquare_FUNC(matrix_t mat, matrix_t matsq) {
+  
+  // Resets the squared array
+  for(int i=0; i<mat.rows; i++){
+    for(int j=0; j<mat.cols; j++){
+      MSET(matsq,i,j,0);                          // set to 0
+    }
+  }
+
+  // Pre-declare local variables
+  int lead,mult1,mult2,curr1,curr2;
+
+  // Utilizes C's row-major structure
+  for(int i=0; i<mat.rows; i++){
+    for(int j=0; j<mat.cols; j++){
+      lead=MGET(mat,i,j);                         // lead value for each multiplication
+      int k;
+      for(k=0;k<mat.rows-2;k+=2){
+        mult1=MGET(mat,j,k);                      // the multiplied value (2 at a time with unrolling)
+        mult2=MGET(mat,j,k+1);
+        curr1=MGET(matsq,i,k)+(lead*mult1);       // previous value plus the new calculation (2 at a time)
+        curr2=MGET(matsq,i,k+1)+(lead*mult2);
+        MSET(matsq,i,k,curr1);                    // set the new value
+        MSET(matsq,i,k+1,curr2);
+      }
+      for(;k<mat.rows;k++){                       // cleans up odd dimension matrices (same operations as above)
+        mult1=MGET(mat,j,k);
+        curr1=MGET(matsq,i,k)+(lead*mult1);
+        MSET(matsq,i,k,curr1);
+      }
+    }
+  }
+  
+  return 0;
+}
+  ##################################################################
+
+
+(B) Timing on csel-kh1250-NN
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Paste a copy of the results of running `matsquare_benchmark' on
+  csel-kh1250-NN.cselabs.umn.edu in the space below which shows how your
+  performance optimizations improved on the baseline codes.
+
+  ####################### YOUR ANSWER HERE #########################
+  ==== Matrix Square Benchmark Version 1 ====
+  SIZE       BASE       OPTM  SPDUP   LOG2 FACTOR POINTS 
+   273 3.8924e-02 1.9334e-02   2.01   1.01   1.00   1.01 
+   512 2.5297e-01 1.2370e-01   2.05   1.03   1.88   1.94 
+   722 6.2243e-01 3.3983e-01   1.83   0.87   2.64   2.31 
+   801 9.1792e-01 4.6532e-01   1.97   0.98   2.93   2.88 
+  1024 3.1143e+00 9.8552e-01   3.16   1.66   3.75   6.23 
+  1101 7.3209e+00 1.2346e+00   5.93   2.57   4.03  10.36 
+  1309 1.5087e+01 2.0529e+00   7.35   2.88   4.79  13.80 
+RAW POINTS: 38.51
+TOTAL POINTS: 35 / 35
+  ##################################################################
+
+
+(C) Optimizations
+~~~~~~~~~~~~~~~~~
+
+  Describe in some detail the optimizations you used to speed the code
+  up.  THE CODE SHOULD CONTAIN SOME COMMENTS already to describe these
+  but in the section below, describe in English the techniques you used
+  to make the code run faster.  Format your descriptions into discrete
+  chunks such as.
+        Optimization 1: Blah bla blah... This should make run
+        faster because yakkety yakeety yak.
+
+        Optimization 2: Blah bla blah... This should make run
+        faster because yakkety yakeety yak.
+
+   ...  Optimization N: Blah bla blah... This should make run
+        faster because yakkety yakeety yak.
+  Full credit solutions will have a least two optimizations and describe
+  WHY these improved performance in at least a couple sentences.
+
+  ####################### YOUR ANSWER HERE #########################
+  Optimization 1: Row-Major Calculation
+  ''' 
+    By doing this, the memory access was reordered in a way that 
+    favors the cache because stride is reduced. This also allows
+    for micro-optimizations that wouldn't be possible otherwise
+  '''
+  
+  Optimization 2: Use of Local Variables
+  '''
+    By doing this, there are less accesses to memory through the
+    matrix macros. While the base function does the same, this is
+    more effective in my function due to the earlier memory 
+    optimization
+  '''
+  
+  Optimization 3: Loop Unrolling
+  '''
+    This reduced the number of iterations of the loop by ≈ 1/2.
+    The cache holds several values at once, so this change to the
+    loop structure allows use of the next elements without having to
+    reiterate the loop. This, when added to the previous memory
+    optimization makes the algorithm faster.
+  '''
+  ##################################################################
+
+
+PROBLEM 2: Timing Search Algorithms
+===================================
+
+  Do your timing study on csel-kh1250-NN.cselabs.umn.edu. In most cases,
+  report times larger than 1e-03 seconds as times shorter than this are
+  unreliable. Run searches for more repetitions to lengthen run times.
+
+
+(A) Min Size for Algorithmic Differences
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Determine the size of input array does one start to see a measurable
+  difference in the performance of the linear and logarithmic
+  algorithms.  Produce a timing table which includes all algorithms
+  which clearly demonstrates an uptick in the times associated with some
+  while others remain much lower.  Identify what size this appears to be
+  a occur.
+
+  ####################### YOUR ANSWER HERE #########################
+./search_benchmark 0 14 10
+=======================SEARCH ALGORITHM TIMINGS=======================
+  LENGTH SEARCHES        array         list       binary         tree 
+       1       20   5.0000e-06   3.0000e-06   3.0000e-06   3.0000e-06 
+       2       40   3.0000e-06   3.0000e-06   4.0000e-06   3.0000e-06 
+       4       80   6.0000e-06   4.0000e-06   5.0000e-06   5.0000e-06 
+       8      160   1.1000e-05   8.0000e-06   8.0000e-06   7.0000e-06 
+      16      320   2.1000e-05   1.8000e-05   1.5000e-05   1.5000e-05 
+      32      640   9.5000e-05   8.9000e-05   3.4000e-05   3.3000e-05 
+      64     1280   2.0200e-04   3.5200e-04   7.9000e-05   8.0000e-05 
+     128     2560   6.3100e-04   1.3360e-03   2.4000e-04   2.6500e-04 
+     256     5120   2.1870e-03   1.1350e-03   1.6100e-04   1.6500e-04 
+     512    10240   1.6390e-03   4.0870e-03   3.3500e-04   2.8900e-04 
+    1024    20480   6.2370e-03   1.8800e-02   5.8400e-04   6.1300e-04 
+    2048    40960   2.4307e-02   2.2047e-01   1.2350e-03   1.3030e-03 <-- 2^11 
+    4096    81920   9.5943e-02   9.9694e-01   2.6330e-03   2.7760e-03 
+    8192   163840   3.8291e-01   5.2490e+00   5.4690e-03   5.7800e-03 
+   16384   327680   1.5285e+00   3.5132e+01   1.1372e-02   1.2658e-02
+
+Until the 2^11 size, the results are not reliable for every data
+structure. After that size, the differences only grow larger in favor
+of the logarithmic algorithms.
+  ##################################################################
+
+
+(B) Linear Search in List vs Array
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Determine whether the linear array and linked list search remain
+  approximately at the same performance level as size increases to large
+  data or whether one begins to become favorable over other. Determine
+  the approximate size at which this divergence becomes obvious. Discuss
+  reasons WHY this difference arises.
+
+  ####################### YOUR ANSWER HERE #########################
+./search_benchmark 0 14 10 al
+=======================SEARCH ALGORITHM TIMINGS=======================
+  LENGTH SEARCHES        array         list 
+       1       20   4.0000e-06   3.0000e-06 
+       2       40   4.0000e-06   3.0000e-06 
+       4       80   6.0000e-06   4.0000e-06 
+       8      160   1.1000e-05   8.0000e-06 
+      16      320   2.3000e-05   1.9000e-05 
+      32      640   6.0000e-05   8.6000e-05 
+      64     1280   1.9800e-04   3.5700e-04 
+     128     2560   6.3300e-04   8.1600e-04 
+     256     5120   8.9600e-04   1.4130e-03 
+     512    10240   2.2590e-03   5.5870e-03 <-- 2^9 (obvious here as you have lists taking 2x the time)
+    1024    20480   7.2860e-03   2.1111e-02 
+    2048    40960   2.6749e-02   2.3227e-01 
+    4096    81920   1.0115e-01   1.1307e+00
+    8192   163840   4.1666e-01   5.6357e+00
+   16384   327680   1.5256e+00   3.5947e+01 
+
+ The reason why linked lists are slower is because the elements are not
+ contiguous in memory. Searching for odd elements that are large traverse
+ through memory with many, many gaps and thus goes slower. Arrays are
+ contiguous in memory, however, so that is why it is much faster even at
+ larger sizes.
+  ##################################################################
+
+
+(C) Binary Search in Tree vs Array
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Compare the binary array search and binary tree search on small to
+  very large arrays. Determine if there is a size at which the
+  performance of these two begins to diverge. If so, describe why this
+  might be happening based on your understanding of the data structures
+  and the memory system. If not, describe why you believe there is
+  little performance difference between the two.
+
+  ####################### YOUR ANSWER HERE #########################
+./search_benchmark 0 20 10 bt
+=======================SEARCH ALGORITHM TIMINGS=======================
+  LENGTH SEARCHES       binary         tree 
+       1       20   5.0000e-06   3.0000e-06 
+       2       40   3.0000e-06   4.0000e-06 
+       4       80   7.0000e-06   4.0000e-06 
+       8      160   8.0000e-06   8.0000e-06 
+      16      320   1.5000e-05   1.5000e-05 
+      32      640   3.3000e-05   3.4000e-05 
+      64     1280   8.3000e-05   9.2000e-05 
+     128     2560   2.9600e-04   2.6900e-04 
+     256     5120   7.4900e-04   6.4300e-04 
+     512    10240   1.5470e-03   3.3200e-04 
+    1024    20480   6.5000e-04   6.3600e-04 
+    2048    40960   1.3050e-03   1.3720e-03 
+    4096    81920   2.7490e-03   2.7600e-03 
+    8192   163840   5.4820e-03   5.8430e-03 
+   16384   327680   1.1410e-02   1.2687e-02 
+   32768   655360   2.3620e-02   2.7040e-02 
+   65536  1310720   4.9010e-02   5.3024e-02 
+  131072  2621440   1.0210e-01   1.9551e-01 
+  262144  5242880   2.1142e-01   4.6957e-01 <-- 2^18 (over 2x the time for tree)
+  524288 10485760   4.3782e-01   1.0494e+00 
+ 1048576 20971520   9.6587e-01   2.4704e+00
+
+Logarithmic searches are much more efficient in sorted data structures.
+Compared to a linear array and linked list search, the differences 
+between logorithmic searches in trees and sorted arrays do not become
+substantial until sizes are much larger. One is continuously dividing 
+into half size subsets and the other traverses linearly. The former will
+always be quicker.  
+
+I think the obvious difference in times start at a size of 2^18. The 
+reason for it being so large is explained above. In addition arrays are 
+contiguous in memory which increases the speed of lookups. Each  node 
+in a tree is allocated seperately in memory. So despite using a 
+favorable algorithm, it is ultimately slower than arrays in searching 
+as data increases.
+  ##################################################################
+
+
+(D) Caching Effects on Algorithms
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  It is commonly believed that memory systems that feature a Cache will
+  lead to arrays performing faster than linked structures such as Linked
+  Lists and Binary Search Trees. Describe whether your timings confirm
+  or refute this belief.  Address both types of algorithms in your
+  answer:
+  - What effects does Cache have on Linear Search in arrays and lists
+    and why?
+  - What effects does Cache have on Binary Search in arrays and trees
+    and why?
+
+  ####################### YOUR ANSWER HERE #########################
+2B/C addresses this implicitly, but this will be in more detail.
+
+The effects on cache in linear structures (unsorted arrays and linked
+lists) are the reason for the timing differences. Arrays can exploit
+cache much more effectively in arrays, since neighboring elements in 
+memory to the query are also in the cache. There are numerous gaps
+in memory when a linked list creates a node. That doesn't allow for it
+to take advantage of the cache like an array can since there will be
+many cache misses. The same goes for the binary search structures
+
+In addition to that, the CPU also tries to predict the next bit of
+memory it needs to use. When elements are close (in arrays), the CPU
+will access memory that is near since it is very possible it will be used.
+In "node" structures, this is not possible since everything is placed
+pretty randomly in memory. Even with a preferable structure like a bst
+for searching, the advantage is always in favor of arrays when it comes
+to big data.
+
+In summary, cache blocks hold relevant memory much more for arrays
+even if they aren't sorted. Given that, the CPU can predict which
+memory to access earlier (pipelining/superscaling effects). This is not
+the case for node structures like lists and bsts. The difference is clear
+earlier in linear structures, and later in binary structures. The result
+is the same: arrays are better (at least when it comes to searching).
+  ##################################################################
+
+
+(E) OPTIONAL MAKEUP CREDIT
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  If you decided to make use of a table of function pointers/structs
+  which is worth makeup credit, describe your basic design for this
+  below.
+
+  ####################### YOUR ANSWER HERE #########################
+  x/x/x/x/x/x/x/x/x/x/x/x/x/x/x/x/x/x/x/x/x/x/x/x/x/x/x/x/x/x/x/x/x/
+  ##################################################################

@@ -1,0 +1,249 @@
+                           _________________
+
+                            HW 12 QUESTIONS
+                           _________________
+
+
+- Name: (FILL THIS in)
+- X.500: (THE kauf0095 IN kauf0095@umn.edu)
+
+Write your answers to the questions below directly in this text file to
+prepare for the associated quiz.
+
+
+Note on Experimentation: Run on csel-kh1250-NN
+==============================================
+
+  As has been the case in the past, timing execution of code is always
+  influenced by the specific machine the code is run on. While you are
+  free to run the benchmark codes anywhere on HWs, TAs will be familiar
+  with the answers for runs on csel-kh1250-NN.cselabs.umn.edu.  For the
+  most consistent results, run the codes there.
+
+
+PROBLEM 1: colmins_main.c
+=========================
+
+(A) Timing
+~~~~~~~~~~
+
+  Compile and run the provided `colmins_main' program as indicated
+  below.
+
+  ,----
+  | > make
+  | gcc -Wall -g -Og -c colmins_main.c		
+  | gcc -Wall -g -Og -c colmins_funcs.c		
+  | gcc -Wall -g -Og -c matvec_util.c
+  | gcc -Wall -g -Og -o colmins_main colmins_main.o colmins_funcs.o matvec_util.o
+  | 
+  | > ./colmins_main 8000 16000
+  `----
+
+  Notice that the size of the matrix being used is quite large: 8000
+  rows by 16000 columns. You may time other sizes but 8000x16000 is
+  usually large enough to get beyond obvious cache effects on most
+  machines.
+
+  Run the program several times to ensure that you get a good sense of
+  what it's normal behavior is like: there should be timing differences
+  between the different functions reported on.
+
+  Paste the timing results produced below for `./colmins_main 8000
+  16000'
+
+
+Solution                                                      :solution:
+--------
+
+  ,----
+  | csel-kh1250-02> ./colmins_main 8000 16000
+  |      col_mins1 CPU usage: 1.4666e+00 sec
+  |      col_mins2 CPU usage: 1.4606e+00 sec
+  |      col_mins3 CPU usage: 1.4580e+00 sec
+  |      col_mins4 CPU usage: 4.6498e-01 sec
+  |      col_mins5 CPU usage: 1.0917e-01 sec
+  | 
+  | 
+  | atlas> make
+  | gcc -Wall -g -Og -c colmins_main.c		
+  | gcc -Wall -g -Og -c colmins_funcs.c		
+  | gcc -Wall -g -Og -c matvec_util.c
+  | gcc -Wall -g -Og -o colmins_main colmins_main.o colmins_funcs.o matvec_util.o		
+  | atlas> ./colmins_main 8000 8000
+  |      col_mins1 CPU usage: 1.5689e+00 sec
+  |      col_mins2 CPU usage: 1.5745e+00 sec
+  |      col_mins3 CPU usage: 1.5730e+00 sec
+  |      col_mins4 CPU usage: 4.1897e-01 sec
+  |      col_mins5 CPU usage: 1.7832e-01 sec
+  | 
+  | phaedrus>
+  |      col_mins1 CPU usage: 1.2318e+00 sec
+  |      col_mins2 CPU usage: 1.3007e+00 sec
+  |      col_mins3 CPU usage: 1.0541e+00 sec
+  |      col_mins4 CPU usage: 6.0267e-01 sec
+  |      col_mins5 CPU usage: 2.2143e-01 sec
+  `----
+
+
+(B) Tricks
+~~~~~~~~~~
+
+  Examine the source code for `colmins_main.c'.  Identify the technique
+  that is used to avoid a large amount of repeated code to time the
+  multiple functions.
+
+
+Solution                                                      :solution:
+--------
+
+  A table of function pointers/ids are established early on.
+  ,----
+  |   minfuncs_t funcs[] = {
+  |     {"col_mins1",col_mins1},
+  |     {"col_mins2",col_mins2},
+  |     {"col_mins3",col_mins3},
+  |     {"col_mins4",col_mins4},
+  |     {"col_mins5",col_mins5},
+  |     {NULL, NULL}
+  |   };  
+  `----
+  This table is iterated over invoking the appropriate function in a
+  loop. This avoids much repeated code.
+
+  ,----
+  |   for(int i=0; funcs[i].id!=NULL; i++){
+  |     minfuncs_t func = funcs[i];
+  |     vector_init(&mins_b, mat.cols);  
+  |     begin = clock();
+  |     ret = func.min_func(mat,mins_b);  // call a function via a pointer
+  |     end = clock();
+  |     ...
+  |   }
+  `----
+
+
+Problem 2: Comparisons in colmins_funcs.c
+=========================================
+
+(A) col_mins1 baseline
+~~~~~~~~~~~~~~~~~~~~~~
+
+  Examine the `col_mins1' function in `colmins_funcs.c' and describe the
+  basic approach it uses to solve the problem of finding the minimum of
+  each column of a matrix.
+  - What pattern of access is used? Is this advantageous for the layout
+    of the matrix?
+  - What local variables are used versus main memory gets/sets?
+
+
+Solution                                                      :solution:
+--------
+
+  - `col_mins1' iterates down each column so for the row-major ordered
+    matrix, cache will not be well-utilized.
+  - Very few local variables are used, mostly repeated calls to MGET(),
+    VGET(), and VSET(). This means more main memory read/writes.
+
+
+(B) col_mins2 Comparison
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Examine the differences between `col_mins1' and `col_mins2'.
+  Particularly comment on
+  - Any differences in memory access pattern
+  - Any differences in use of local variables/main memory
+  - Any differences in speed
+
+
+Solution                                                      :solution:
+--------
+
+  - `col_mins2' iterates over each column identically to `col_mins1'
+  - `col_mins2' uses some local variables and reducing the calls to
+    VGET() and the like. This means somewhat fewer main memory accesses.
+  - `col_mins2' seems to run in most cases about the same speed or
+    slightly faster than `col_mins1' meaning the optimization performed
+    is of limited value
+
+
+(C) col_mins3 Comparison
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+  `col_mins3' implements an optimization called loop unrolling.  In this
+  technique, rather than iterate by single increments, larger steps are
+  taken. Since each iteration uses multiple local variables to store
+  partial results that must eventually be combined. All this is meant to
+  allow the processor to execute more instructions in sequence before
+  looping back which may enable more efficient pipelined and superscalar
+  operations.
+
+  Examine the differences between `col_mins2' and `col_mins3'.
+  Particularly comment on
+  - Any differences in memory access pattern
+  - Any differences in use of local variables/main memory
+  - Any differences in speed that might be due to the new optimizations
+
+
+Solution                                                      :solution:
+--------
+
+  - The memory access pattern is identical: down columns meaning we are
+    still not hitting cache
+  - More local variables are used which are separate locations in the
+    main loop. This might enable more processor pipelining.
+  - This optimization gives some speed boosts on some platforms but on
+    atlas it does almost nothing to speed up the code.
+
+
+(D) col_mins4 Comparison
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+  `col_mins4' also loop unrolling but in a different way than
+  `col_mins3'.
+
+  Examine the differences between `col_mins3' and `col_mins4'.
+  Particularly comment on
+  - What loops are "unrolled" in each and how does this affect the
+    remaining code?
+  - Any differences in memory access pattern
+  - Any differences in use of local variables/main memory
+  - Any differences in speed that might be due to the new optimizations
+
+
+Solution                                                      :solution:
+--------
+
+  - `col_mins3' unrolls the inner "column" loop examining multiple
+    elements in a single column.
+  - `col_mins4' unrolls the outer "row" loop so elements from several
+    columns are examined simultaneously.
+  - The memory access pattern is still down columns but in `col_mins4',
+    several columns in the same row are used. This might favor cache.
+  - Both 3 and 4 use about the same number of local variables.
+  - Most machines including atlas and a typical laptop (phaedrus) see
+    better performance than the inner unroll likely do to more favorable
+    cache access.
+
+
+(E) col_mins5 Comparison: The Real Lesson
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  `col_mins5' is inherently different than all of the other routines.
+  Examine its structure carefully and ensure that you understand it as
+  it may prove useful in an assignment.  Particularly comment on
+  - Any differences in memory access pattern from the others
+  - Any differences in use of local variables/main memory
+  - Any differences in speed that might be due to the new optimizations
+
+
+Solution                                                      :solution:
+--------
+
+  - `col_mins5' changes the memory access pattern to move across
+    rows. This hits cache much more frequently than the down-columns
+    approach of the others.
+  - A minimal amount of local variables are used, only a single one to
+    avoid a repeated MGET()
+  - This is the fastest routine on all platforms tested due to the much
+    more favorable sequential memory access pattern.

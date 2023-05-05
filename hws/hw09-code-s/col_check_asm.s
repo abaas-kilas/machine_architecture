@@ -1,0 +1,22 @@
+.text
+.globl	col_check
+col_check:
+	movq $0xFFFFFFFF,%rdx 
+	movq	%rdi, %rdx      # use edi for cur 
+	sarq	$32, %rdx       # use edx for step
+	movl	$0, %eax        # errs
+	cmpl	$0, %edi        # if(cur <= 0){
+	jg	.CURPOS
+	orl     $0x1,%eax       # eax |= 0x1
+.CURPOS:
+	cmpl	$0, %edx        # if(step < 0)
+        jge     .STEPNONEG
+        orl     $0x2,%eax       # eax |= 0x2
+.STEPNONEG:
+	cmpl	$1, %edi        # cur== 1
+	jnz     .RETURN
+        cmpl    $0, %edx        # && step < 0
+	jge     .RETURN
+	orl     $0x4,%eax       # eax |= 4
+.RETURN:
+        ret

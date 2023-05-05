@@ -1,0 +1,185 @@
+                           _________________
+
+                            HW 11 QUESTIONS
+                           _________________
+
+
+- Name: (FILL THIS in)
+- X.500: (THE kauf0095 IN kauf0095@umn.edu)
+
+Write your answers to the questions below directly in this text file to
+prepare for the associated quiz.
+
+
+Run Code on csel-kh1250-NN
+==========================
+
+  To ensure that you get the expected performance, run your code on
+  `csel-kh1250-NN.cselabs.umn.edu' with `NN' between 01 and 37.  Use SSH
+  or a similar tool to access `csel-kh1250-NN'.
+
+
+PROBLEM 1: Code Overview
+========================
+
+(A) Vector and Matrix
+~~~~~~~~~~~~~~~~~~~~~
+
+  Examine the header file `matvec.h' which gives type definitions and
+  declares functions associated with a simple matrix and vector type.
+
+  For the matrix type `matrix_t' with R rows and C columns, how is a 2D
+  matrix actually laid out in memory?
+
+
+Solution                                                      :solution:
+--------
+
+  `matrix_t' lays out the 2D array in a single array, the field `data'.
+  As indicated by the comments, a 2D index `(i,j)' is translated to the
+  1D index `(i*mat.cols) + j'.
+
+
+(B) Getting and Setting Elements
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  For the `matrix_t' and `vector_t' types, convenient means to get and
+  set elements is provided. This mechanism is used in the utility
+  functions in `matvec_util.c' and defined in `matvec.h'.
+
+  Describe how one would get element (R,C) of `matrix_t' or set it to
+  value Z.  Why are these mechanisms not functions?
+
+
+Solution                                                      :solution:
+--------
+
+  The macros, `MGET(mat,i,j)' and `MSET(mat,i,j,x)' perform these
+  operations on `matrix_t' structs with similar `VGET()' and `VSET()'
+  macros for `vector_t'. They are substituted textually in place for
+  efficiency rather than making them functions calls as function calls
+  induce a performance hit.
+
+
+PROBLEM 2: Timing Rows vs Columns
+=================================
+
+(A) row_sums vs col_sums Timing
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Compile and run the `matsums_main' executable using the provided
+  `Makefile' (typing `make' should suffice).
+
+  Run the code on `csel-kh1250-NN.cselabs.umn.edu' to ensure you get the
+  expected performance experience.
+
+  Run this program with differing parameters which control the number of
+  rows and columns in the matrix which is summed. Show some example runs
+  with different parameters including on large square matrix with 16000
+  rows and 8000 columns.
+
+  Note any speed differences between the two on large matrices.
+
+
+Solution                                                      :solution:
+--------
+
+  `row_sums()' runs significantly faster in most cases than
+  `col_sums()'.
+
+  Running the `matsums_main' program looks like this.
+  ,----
+  | 
+  | 
+  | csel-kh1250-02> make
+  | gcc -Wall -g -Og -c matsums_main.c		
+  | gcc -Wall -g -Og -c matsums_funcs.c		
+  | gcc -Wall -g -Og -c matvec_util.c
+  | gcc -Wall -g -Og -o matsums_main matsums_main.o matsums_funcs.o matvec_util.o		
+  | 
+  | csel-kh1250-02> ./matsums_main 100 500
+  |       row_sums CPU usage: 6.6000e-05 sec
+  |       col_sums CPU usage: 7.5000e-05 sec
+  | 
+  | 
+  | csel-kh1250-02> ./matsums_main 8000 8000
+  |       row_sums CPU usage: 7.7820e-02 sec
+  |       col_sums CPU usage: 6.8709e-01 sec
+  | 
+  | csel-kh1250-02> ./matsums_main 16000 8000
+  |       row_sums CPU usage: 1.6336e-01 sec
+  |       col_sums CPU usage: 1.3563e+00 sec
+  `----
+
+
+(B) row_sums vs col_sums speed
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Examine the source code for the functions `row_sums()' and
+  `col_sums()' in the file `matsums_funcs.c'.  Describe why the
+  timing/speed differences you observed previously are occurring based
+  on features of the source code you see and the layout of the
+  `matrix_t' that is being summed.
+
+
+Solution                                                      :solution:
+--------
+
+  `row_sums()' will run faster as it is essentially a linear scan across
+  the entire 1D-array of the `matrix_t'.  `col_sums()' hops around with
+  a stride based on the number of columns meaning that cache performance
+  will suffer.
+
+
+PROBLEM 3: opt_col_sums()
+=========================
+
+  Complete the function `opt_col_sums()' in file `matsums_funcs.c'. This
+  function should have identical behavior to `col_sums()' (it sums the
+  columns of the matrix into a provided array). However, it should be
+  *optimized* so that it achieves performance near to that of the
+  `row_sums()' function. To achieve this, re-arrange the loops to
+  iterate as efficiently as possible with respect to the memory
+  system. Feel free to ask course staff for hints on how to do this or
+  do some online research.
+
+  To time `opt_col_sums()', uncomment relevant blocks in the
+  `matsums_main.c' program that are provided for it.
+
+  Paste your source code and a copy of the timing results of running
+  `matsums_main' on an 16000 by 8000 matrix.
+
+
+Solution                                                      :solution:
+--------
+
+  ,----
+  | int opt_col_sums(matrix_t mat, vector_t csums){
+  |   // FILL IN CODE
+  |   if(mat.cols != csums.len){
+  |     printf("size mismatch: mat.cols %ld != rsums.len %ld\n",
+  |            mat.cols,csums.len);
+  |     return 1;
+  |   }
+  | 
+  |   for(int j=0; j<csums.len; j++){
+  |     VSET(csums,j,0);
+  |   }
+  | 
+  |   for(int i=0; i<mat.rows; i++){
+  |     for(int j=0; j<mat.cols; j++){
+  |       int sum = VGET(csums,j) + MGET(mat,i,j);
+  |       VSET(csums,j,sum);
+  |     }
+  |   }
+  |   return 0;
+  | }
+  `----
+
+  TIMING
+  ,----
+  | csel-kh1250-02> ./matsums_main 16000 8000
+  |       row_sums CPU usage: 1.6336e-01 sec
+  |       col_sums CPU usage: 1.3563e+00 sec
+  |   opt_col_sums CPU usage: 1.1295e-01 sec
+  `----
